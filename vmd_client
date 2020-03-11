@@ -1,0 +1,28 @@
+#!/bin/bash
+cd /home/myuser/CASE
+DATA_PATH_DOCKER=${1:-}
+file_name=${2:-15.xyz}
+
+
+echo ${DOCKERID}; export DISPLAY=:1;
+
+cp /home/myuser/CASE/script_vmd_Spezia.* /home/myuser/.vnc/
+echo "sed with ${DATA_PATH_DOCKER} ${file_name}"
+sed -e "s&/home/mmancip/BIOMOLECULAR/SPEZIA/T830/15.xyz&${DATA_PATH_DOCKER}/${file_name}&g" -e "s&mol rename top 15.xyz&mol rename top ${file_name}&" -i /home/myuser/.vnc/script_vmd_Spezia.vmd
+
+cd /home/myuser/.vnc
+/opt/vmd-1.9.2/bin/vmd.sh -python -e ./script_vmd_Spezia.py > /home/myuser/.vnc/out_vmd_$$_$(date +%F_%H-%M-%S) 2>&1 &
+
+i=0
+while [ true ]; do
+    sleep 1
+    pgrep -fla vmd_LINUXAMD64 | wc -l |awk '{print ($1 >= 1)}' |grep 1
+    RET=$?
+    if [ $RET -eq 0 ]; then
+	break
+    elif [ $i -gt 100 ]; then
+	break
+    fi
+    i=$((i+1))
+done
+exit $RET
