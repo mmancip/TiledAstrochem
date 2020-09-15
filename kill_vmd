@@ -1,0 +1,1 @@
+pgrep vmd_LINUXAMD64| xargs kill

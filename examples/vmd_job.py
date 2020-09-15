@@ -154,28 +154,94 @@ if __name__ == '__main__':
     get_file_client(client,TileSet,CASEdir,"nodes.json",".")
     
     # Launch docker tools
-    client.send_server('execute TS='+TileSet+' /opt/tunnel_ssh '+SOCKETdomain+' '+HTTP_FRONTEND+' '+HTTP_LOGIN)
-    print("Out of tunnel_ssh : "+ str(client.get_OK()))
-    
-    client.send_server('execute TS='+TileSet+' /opt/vnccommand')
-    print("Out of vnccommand : "+ str(client.get_OK()))
+    def launch_tunnel():
+        client.send_server('execute TS='+TileSet+' /opt/tunnel_ssh '+SOCKETdomain+' '+HTTP_FRONTEND+' '+HTTP_LOGIN)
+        print("Out of tunnel_ssh : "+ str(client.get_OK()))
+    launch_tunnel()
 
-    client.send_server('execute TS='+TileSet+' xrandr --fb 1440x900')
-    print("Out of xrandr : "+ str(client.get_OK()))
+    def launch_vnc():
+        client.send_server('execute TS='+TileSet+' /opt/vnccommand')
+        print("Out of vnccommand : "+ str(client.get_OK()))
+    launch_vnc()
 
-    # TODO : give a liste of lines !
-    for i in range(NUM_DOCKERS):
+    def launch_resize(RESOL="1440x900"):
+        client.send_server('execute TS='+TileSet+' xrandr --fb '+RESOL)
+        print("Out of xrandr : "+ str(client.get_OK()))
+    launch_resize()
+
+    def launch_one_client(script='vmd_client',tileNum=-1,tileId='001'):
         line=taglist.readline().split(' ')
         file_name=(line[1].split('='))[1].replace('"','')
-        COMMAND=' Tiles=('+containerId(i+1)+') '+CASE_DOCKER_PATH+'vmd_client '+DATA_PATH_DOCKER+' '+file_name
+        COMMAND=' '+CASE_DOCKER_PATH+script+' '+DATA_PATH_DOCKER+' '+file_name
+        if ( tileNum > -1 ):
+            TilesStr=' Tiles=('+containerId(tileNum+1)+') '            
+        else:
+            TilesStr=' Tiles=('+tileId+') '
         print("%d VMD command : %s" % (i,COMMAND))
-        CommandTS='execute TS='+TileSet+COMMAND
+        CommandTS='execute TS='+TileSet+TilesStr+COMMAND
         client.send_server(CommandTS)
     
         client.get_OK()
 
+    # TODO : give a list of lines !
+    for i in range(NUM_DOCKERS):
+        launch_one_client(tileNum=i,file_name=file_name):
+    Last_Elt=NUM_DOCKERS-1
+    
+    def next_element(script='vmd_client',tileNum=-1,tileId='001'):
+        line=taglist.readline().split(' ')
+        file_name=(line[1].split('='))[1].replace('"','')
+        COMMAND=' '+CASE_DOCKER_PATH+script+' '+DATA_PATH_DOCKER+' '+file_name
+        COMMANDKill=' '+CASE_DOCKER_PATH+"kill_vmd"
+        if ( tileNum > -1 ):
+            TilesStr=' Tiles=('+containerId(tileNum+1)+') '            
+        else:
+            TilesStr=' Tiles=('+tileId+') '
+        print("%d VMD command : %s" % (i,COMMAND))
+
+        CommandTSK='execute TS='+TileSet+TilesStr+COMMANDKill
+        client.send_server(CommandTSK)
+        client.get_OK()
+        
+        CommandTS='execute TS='+TileSet+TilesStr+COMMAND
+        client.send_server(CommandTS)
+        client.get_OK()
+
     client.send_server('execute TS='+TileSet+' wmctrl -l -G')
     print("Out of wmctrl : "+ str(client.get_OK()))
+
+    def launch_changesize(RESOL="1920x1080",tileNum=-1,tileId='001'):
+        if ( tileNum > -1 ):
+            TilesStr=' Tiles=('+containerId(tileNum+1)+') '
+        else:
+            TilesStr=' Tiles=('+tileId+') '
+        COMMAND='execute TS='+TileSet+TilesStr+' xrandr --fb '+RESOL
+        print("call server with : "+COMMAND)
+        client.send_server(COMMAND)
+        print("server answer is "+str(client.get_OK()))
+    
+    def launch_smallsize(tileNum=-1,tileId='001'):
+        print("Launch launch_changesize smallsize for tile "+str(tileNum))
+        launch_changesize(tileNum=tileNum,RESOL="950x420")
+
+    def launch_bigsize(tileNum=-1,tileId='001'):
+        print("Launch launch_changesize bigsize for tile "+str(tileNum))
+        launch_changesize(tileNum=tileNum,RESOL="1920x1200")
+
+    def fullscreenApp(windowname="VMD 1.9.2 OpenGL Display",tileNum=-1):
+        movewindows(windowname=windowname,wmctrl_option='toggle,fullscreen',tileNum=tileNum)
+
+    def movewindows(windowname="VMD 1.9.2 OpenGL Display",wmctrl_option='toggle,fullscreen',tileNum=-1,tileId='001'):
+        #remove,maximized_vert,maximized_horz
+        #toggle,above
+        #movewindows(windowname='glxgears',wmctrl_option="toggle,fullscreen",tileNum=2)
+        if ( tileNum > -1 ):
+            TilesStr=' Tiles=('+containerId(tileNum+1)+') '
+        else:
+            TilesStr=' Tiles=('+tileId+') '
+        client.send_server('execute TS='+TileSet+TilesStr+'/opt/movewindows '+windowname+' -b '+wmctrl_option)
+        client.get_OK()
+
 
     try:
         code.interact(banner="Code interact :",local=dict(globals(), **locals()))
