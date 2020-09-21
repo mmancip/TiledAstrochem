@@ -63,7 +63,7 @@ while IFS='' read -r -u3 line && IFS='' read -r -u4 line2 || [[ -n "$line" ]]; d
   #final=5_$(echo ${aline[6]} |sed -e "s&\ &_&g" -e "s/.*Final_time=\"\(.*\)\".*/\1/")
   method=6_$(echo ${aline[7]} |sed -e "s&\ &_&g" -e "s/.*Method=\"\(.*\)\".*/\1/")
   impfact=7_$(echo ${aline[8]} |sed -e "s&\ &_&g" -e "s/.*Impact_factor=\"\(.*\)\".*/\1/")
-  temp=8_$(echo ${aline[9]} |sed -e "s&\ &_&g" -e "s/.*Temperature=\"\(.*\)\"/\1/")
+  temp=8_$(echo ${aline[9]} |sed -e "s&\ &_&g" -e "s/.*Temperature=\"\(.*\)\".*/\1/")
 
   if [ $i -gt 0 ]; then
       echo '},' >> nodes.json
