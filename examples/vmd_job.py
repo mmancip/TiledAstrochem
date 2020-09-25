@@ -241,7 +241,7 @@ if __name__ == '__main__':
     def fullscreenApp(windowname="VMD 1.9.2 OpenGL Display",tileNum=-1):
         movewindows(windowname=windowname,wmctrl_option='toggle,fullscreen',tileNum=tileNum)
 
-    def movewindows(windowname="VMD 1.9.2 OpenGL Display",wmctrl_option='toggle,fullscreen',tileNum=-1,tiéleId='001'):
+    def movewindows(windowname="VMD 1.9.2 OpenGL Display",wmctrl_option='toggle,fullscreen',tileNum=-1,tileId='001'):
         #remove,maximized_vert,maximized_horz
         #toggle,above
         #movewindows(windowname='glxgears',wmctrl_option="toggle,fullscreen",tileNum=2)
