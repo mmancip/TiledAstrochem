@@ -10,6 +10,10 @@ cp /home/myuser/CASE/script_vmd_Spezia.* /home/myuser/.vnc/
 echo "sed with ${DATA_PATH_DOCKER} ${file_name}"
 sed -e "s&/home/mmancip/BIOMOLECULAR/SPEZIA/T830/15.xyz&${DATA_PATH_DOCKER}/${file_name}&g" -e "s&mol rename top 15.xyz&mol rename top ${file_name}&" -i /home/myuser/.vnc/script_vmd_Spezia.vmd
 
+ln -s /usr/lib64/libtk8.6.so /home/myuser/CASE/libtk8.5.so
+ln -s /usr/lib64/libtcl8.6.so /home/myuser/CASE/libtcl8.5.so
+export LD_LIBRARY_PATH=/home/myuser/CASE/:$LD_LIBRARY_PATH
+
 cd /home/myuser/.vnc
 /opt/vmd-1.9.2/bin/vmd.sh -python -e ./script_vmd_Spezia.py > /home/myuser/.vnc/out_vmd_$$_$(date +%F_%H-%M-%S) 2>&1 &
 
