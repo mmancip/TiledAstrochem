@@ -202,6 +202,7 @@ def launch_one_client(script='vmd_client',tileNum=-1,tileId='001'):
     print("%s VMD command : %s" % (TilesStr,COMMAND))
     CommandTS=ExecuteTS+TilesStr+COMMAND
     client.send_server(CommandTS)
+    client.get_OK()
 
 # TODO : give a list of lines !
 def Run_clients():
