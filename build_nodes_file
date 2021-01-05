@@ -34,7 +34,7 @@ function tag_int() {
     local lineid=$2
     local name=$3
     local tagid=$4
-    local out=$tagid_$(eval echo \${$line[$lineid]} |sed -e "s&\ &_&g" -e "s/.*$name=\"\(.*\)\".*/\1/")
+    local out=${tagid}_$(eval echo \${$line[$lineid]} |sed -e "s&\ &_&g" -e "s/.*$name=\"\(.*\)\".*/\1/")
     echo $out
 }
 
