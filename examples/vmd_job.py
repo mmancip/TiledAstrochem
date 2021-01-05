@@ -132,7 +132,7 @@ sys.stdout.flush()
 
 # Launch dockers
 def Run_dockers():
-    COMMAND="bash -vx -c \""+os.path.join(TILEDOCKERS_path,"launch_dockers")+" "+REF_CAS+" "+GPU_FILE+" "+HTTP_FRONTEND+":"+HTTP_IP+\
+    COMMAND="bash -c \""+os.path.join(TILEDOCKERS_path,"launch_dockers")+" "+REF_CAS+" "+GPU_FILE+" "+HTTP_FRONTEND+":"+HTTP_IP+\
              " "+network+" "+nethost+" "+domain+" "+init_IP+" TileSetPort "+UserFront+"@"+Frontend+" "+OPTIONS+\
              " > "+os.path.join(JOBPath,"output_launch")+" 2>&1 \"" 
 
@@ -253,6 +253,33 @@ def clear_vnc_all():
         #clear_vnc(tileId=containerId(i))
 
 clear_vnc_all()
+
+def click_point(tileNum=-1,tileId='001',X=0,Y=0):
+    if ( tileNum > -1 ):
+        TilesStr=' Tiles=('+containerId(tileNum+1)+') '
+    else:
+        TilesStr=' Tiles=('+tileId+') '
+    COMMAND=" xdotool mousemove "+str(X)+" "+str(Y)+" click 1 mousemove restore"
+    # -> xdotool getmouselocation
+    client.send_server(ExecuteTS+TilesStr+COMMAND)
+    print("Out of click_point : "+ str(client.get_OK()))
+
+def start_traj(tileNum=-1,tileId='001'):
+    Xstart=466
+    Ystart=198
+    if ( tileNum > -1 ):
+        click_point(tileNum=tileNum,X=Xstart,Y=Ystart)
+    else:
+        click_point(tileId=tileId,X=Xstart,Y=Ystart)
+
+def stop_traj(tileNum=-1,tileId='001'):
+    Xstart=446
+    Ystart=198
+    if ( tileNum > -1 ):
+        click_point(tileNum=tileNum,X=Xstart,Y=Ystart)
+    else:
+        click_point(tileId=tileId,X=Xstart,Y=Ystart)
+
 
 def toggle_fullscr():
     for i in range(NUM_DOCKERS):
