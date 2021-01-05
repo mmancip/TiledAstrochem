@@ -78,12 +78,12 @@ while IFS='' read -r -u3 line && IFS='' read -r -u4 line2 || [[ -n "$line" ]]; d
   reactants=$(tag_int "aline" 2 "Reactants" 1)
 #\([0-9A-Z]*\)p_\([0-9A-Z]*\)\".*/1_\1_+_\2/")
   products=$(tag_int "aline" 3 "Products" 2)
-  energy=$(tag_real "aline" 4 "Energy" 3)
-  type_=$(tag_int "aline" 5 "Type" 4)
-  final=$(tag_real "aline" 6 "Final_time" 5)
-  method=$(tag_int "aline" 7 "Method" 6)
-  impfact=$(tag_real "aline" 8 "Impact_factor" 7)
-  temp=$(tag_real "aline" 9 "Temperature" 8)
+  type_=$(tag_int "aline" 5 "Type" 3)
+  method=$(tag_int "aline" 7 "Method" 4)
+  impfact=$(tag_real "aline" 8 "Impact_factor" 5)
+  energy=$(tag_real "aline" 4 "Energy" 6)
+  temp=$(tag_real "aline" 9 "Temperature" 7)
+  final=$(tag_real "aline" 6 "Final_time" 8)
 
   if [ $i -gt 0 ]; then
       echo '},' >> nodes.json
@@ -95,7 +95,7 @@ while IFS='' read -r -u3 line && IFS='' read -r -u4 line2 || [[ -n "$line" ]]; d
   echo ' "url" : "'${URL}'?host='${HTTP_FRONTEND}'&port='${SOCKETdomain}${i0}'&encrypt=0&password='${pass}'&true_color=1",' >> nodes.json
   echo ' "comment" : "'$( echo $line2| sed -e s/\"//g )' '${DATE}'",' >> nodes.json
   echo ' "usersNotes"  : "This is node '$i'  : Docker host '${thishost}' and noVNC server for file '${file_name}'",' >> nodes.json
-  echo ' "tags"  : ["'$TileSet'","'$reactants'", "'$products'", "'$energy'", "'$type_'", "'$method'", "'$impfact'",  "'$temp'"],' >> nodes.json
+  echo ' "tags"  : ["'$TileSet'","'$reactants'", "'$products'", "'$energy'", "'$type_'", "'$method'", "'$impfact'",  "'$temp'", "'$final'"],' >> nodes.json
 
   echo '"connection" : 1' >> nodes.json
 
