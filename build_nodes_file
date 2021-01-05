@@ -29,6 +29,25 @@ function min {
 
 DATE=$(date +%F_%H-%M-%S)
 
+function tag_int() {
+    local line=$1
+    local lineid=$2
+    local name=$3
+    local tagid=$4
+    local out=$tagid_$(eval echo \${$line[$lineid]} |sed -e "s&\ &_&g" -e "s/.*$name=\"\(.*\)\".*/\1/")
+    echo $out
+}
+
+function tag_real() {
+    local line=$1
+    local lineid=$2
+    local name=$3
+    local tagid=$4
+    local out=$(eval echo \${$line[$lineid]} |sed -e "s&\ &_&g" -e "s/.*$name=\"\(.*\)\".*/\1/" -e "s/{/{${tagid}_/")
+    echo $out
+}
+
+
 echo '{ "nodes": [' > nodes.json
 #echo 'echo '' >> nodes.json' >> nodes.json
 i=0
@@ -56,15 +75,15 @@ while IFS='' read -r -u3 line && IFS='' read -r -u4 line2 || [[ -n "$line" ]]; d
     # File name goes in the "info" field of nodes.json
   file_name=$(echo ${aline[1]} |sed -e "s&\ &_&g" -e "s/.*File=\"\(.*\)\".*/\1/")
     # Commentaire/notes  
-  reactants=1_$(echo ${aline[2]} |sed -e "s&\ &_&g" -e "s/.*Reactants=\"\(.*\)\".*/\1/")
+  reactants=$(tag_int "aline" 2 "Reactants" 1)
 #\([0-9A-Z]*\)p_\([0-9A-Z]*\)\".*/1_\1_+_\2/")
-  products=2_$(echo ${aline[3]} |sed -e "s&\ &_&g" -e "s/.*Products=\"\(.*\)\".*/\1/")
-  energy=$(echo ${aline[4]} |sed -e "s&\ &_&g" -e "s/.*Energy=\"\(.*\)\".*/\1/" -e "s/{/{3_/")
-  type_=4_$(echo ${aline[5]} |sed -e "s&\ &_&g" -e "s/.*Type=\"\(.*\)\".*/\1/")
-  final=5_$(echo ${aline[6]} |sed -e "s&\ &_&g" -e "s/.*Final_time=\"\(.*\)\".*/\1/" -e "s/{/{9_/")
-  method=6_$(echo ${aline[7]} |sed -e "s&\ &_&g" -e "s/.*Method=\"\(.*\)\".*/\1/")
-  impfact=7_$(echo ${aline[8]} |sed -e "s&\ &_&g" -e "s/.*Impact_factor=\"\(.*\)\".*/\1/" -e "s/{/{7_/")
-  temp=8_$(echo ${aline[9]} |sed -e "s&\ &_&g" -e "s/.*Temperature=\"\(.*\)\".*/\1/" -e "s/{/{8_/")
+  products=$(tag_int "aline" 3 "Products" 2)
+  energy=$(tag_real "aline" 4 "Energy" 3)
+  type_=$(tag_int "aline" 5 "Type" 4)
+  final=$(tag_real "aline" 6 "Final_time" 5)
+  method=$(tag_int "aline" 7 "Method" 6)
+  impfact=$(tag_real "aline" 8 "Impact_factor" 7)
+  temp=$(tag_real "aline" 9 "Temperature" 8)
 
   if [ $i -gt 0 ]; then
       echo '},' >> nodes.json
@@ -76,7 +95,7 @@ while IFS='' read -r -u3 line && IFS='' read -r -u4 line2 || [[ -n "$line" ]]; d
   echo ' "url" : "'${URL}'?host='${HTTP_FRONTEND}'&port='${SOCKETdomain}${i0}'&encrypt=0&password='${pass}'&true_color=1",' >> nodes.json
   echo ' "comment" : "'$( echo $line2| sed -e s/\"//g )' '${DATE}'",' >> nodes.json
   echo ' "usersNotes"  : "This is node '$i'  : Docker host '${thishost}' and noVNC server for file '${file_name}'",' >> nodes.json
-  echo ' "tags"  : ["'$TileSet'","'$reactants'", "'$products'", "'$energy'", "'$type_'", "'$method'", "'$impfact'",  "'$temp'"]' >> nodes.json
+  echo ' "tags"  : ["'$TileSet'","'$reactants'", "'$products'", "'$energy'", "'$type_'", "'$method'", "'$impfact'",  "'$temp'"],' >> nodes.json
 
   echo '"connection" : 1' >> nodes.json
 
