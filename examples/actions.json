@@ -1,13 +1,10 @@
 {"action1":["kill_all_containers","delete_forever"],
- "action2":["launch_smallsize","tab"],
- "action3":["launch_resize","picture_in_picture"],
- "action4":["launch_one_client","launch"],
- "action5":["fullscreenApp","all_out"],
- "action6":["showGUI","featured_play_list"],
- "action7":["next_element","swap_horiz"],
+ "action2":["next_element","swap_horiz"],
+ "action3":["clear_vnc","keyboard_hide"],
+ "action4":["launch_smallsize","tab"],
+ "action5":["launch_resize","picture_in_picture"],
+ "action6":["fullscreenApp","all_out"],
+ "action7":["showGUI","featured_play_list"],
  "action8":["start_traj","play_circle_outline"],
- "action9":["stop_traj","pause_circle_outline"],
- "action10":["launch_vnc","airplay"],
- "action11":["clear_vnc","keyboard_hide"],
- "action12":["launch_tunnel","input"]
+ "action9":["stop_traj","pause_circle_outline"]
  }

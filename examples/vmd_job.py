@@ -73,6 +73,10 @@ CreateTS='create TS='+TileSet+' Nb='+str(NUM_DOCKERS)
 
 client.send_server(CreateTS)
 
+# get TiledAstrochem package from Github
+COMMAND_GIT="git clone https://github.com/mmancip/TiledAstrochem.git"
+print("command_git : "+COMMAND_GIT)
+os.system(COMMAND_GIT)
 
 # Global commands
 # Execute on each/a set of tiles
@@ -83,11 +87,6 @@ LaunchTS='launch TS='+TileSet+" "+JOBPath+' '
 # Build VMD dir
 # client.send_server(LaunchTS+" mkdir "+CASE)
 # print("Out of mkdir %s : %s" % (CASE, str(client.get_OK())))
-
-# get TiledAstrochem package from Github
-COMMAND_GIT="git clone https://github.com/mmancip/TiledAstrochem.git"
-print("command_git : "+COMMAND_GIT)
-os.system(COMMAND_GIT)
 
 # Send CASE and SITE files
 try:
@@ -108,6 +107,7 @@ except:
         code.interact(banner="Try sending files by yourself :",local=dict(globals(), **locals()))
     except SystemExit:
         pass
+
 
 
 COMMAND_TiledAstrochem=LaunchTS+COMMAND_GIT
@@ -227,14 +227,16 @@ Run_clients()
 sys.stdout.flush()
 
 def next_element(script='vmd_client',tileNum=-1,tileId='001'):
-    line=taglist.readline().split(' ')
+    line2=taglist.readline()
+    line=line2.split(' ')
     file_name=(line[1].split('='))[1].replace('"','')
     COMMAND=' '+CASE_DOCKER_PATH+script+' '+DATA_PATH_DOCKER+' '+file_name
     COMMANDKill=' '+CASE_DOCKER_PATH+"kill_vmd"
     if ( tileNum > -1 ):
-        TilesStr=' Tiles=('+containerId(tileNum+1)+') '
+        tileId=containerId(tileNum+1)
     else:
-        TilesStr=' Tiles=('+tileId+') '
+        tileNum=int(tileId)-1 
+    TilesStr=' Tiles=('+tileId+') '
     print("%s VMD command : %s" % (TilesStr,COMMAND))
 
     CommandTSK=ExecuteTS+TilesStr+COMMANDKill
@@ -245,6 +247,33 @@ def next_element(script='vmd_client',tileNum=-1,tileId='001'):
     client.send_server(CommandTS)
     client.get_OK()
 
+    nodesf=open("nodes.json",'r')
+    nodes=json.load(nodesf)
+    nodesf.close()
+    
+    nodes["nodes"][tileNum]["title"]=tileId+" "+file_name
+    if ("variable" in nodes["nodes"][tileNum]):
+        nodes["nodes"][tileNum]["variable"]="ID-"+tileId+"_"+file_name
+    nodes["nodes"][tileNum]["comment"]=line2
+    if ("usersNotes" in nodes["nodes"][tileNum]):
+        nodes["nodes"][tileNum]["usersNotes"]=re.sub(r'file .*',"file "+file_name,
+                                                     nodes["nodes"][tileNum]["usersNotes"])
+    nodes["nodes"][tileNum]["tags"]=[]
+    nodes["nodes"][tileNum]["tags"].append(TileSet)
+    nodes["nodes"][tileNum]["tags"].append(line[2].replace('"','').replace('Reactants=','1_'))
+    nodes["nodes"][tileNum]["tags"].append(line[3].replace('"','').replace('Products=','2_'))
+    nodes["nodes"][tileNum]["tags"].append(line[5].replace('"','').replace('Type=','3_'))
+    nodes["nodes"][tileNum]["tags"].append(line[7].replace('"','').replace('Method=','4_'))
+    nodes["nodes"][tileNum]["tags"].append(line[8].replace('"','').replace('Impact_factor={','{5_'))
+    nodes["nodes"][tileNum]["tags"].append(line[4].replace('"','').replace('Energy={','{6_'))
+    nodes["nodes"][tileNum]["tags"].append(line[9].replace('"','').replace('Temperature={','{7_'))
+    nodes["nodes"][tileNum]["tags"].append(line[6].replace('"','').replace('Final_time={','{8_'))
+
+    nodesf=open("nodes.json",'w')
+    nodesf.write(json.dumps(nodes))
+    nodesf.close()
+    
+    
 def init_wmctrl():
     client.send_server(ExecuteTS+' wmctrl -l -G')
     print("Out of wmctrl : "+ str(client.get_OK()))
