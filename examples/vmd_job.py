@@ -226,6 +226,10 @@ def Run_clients():
 Run_clients()
 sys.stdout.flush()
 
+def get_new_nodes():
+    return
+tiles_actions["action0"]=["get_new_nodes","system_update_alt"]
+
 def next_element(script='vmd_client',tileNum=-1,tileId='001'):
     line2=taglist.readline()
     line=line2.split(' ')
