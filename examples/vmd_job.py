@@ -6,6 +6,11 @@ import sys,os,time
 import code
 import argparse
 import re, datetime
+import inspect
+
+# sys.path.append(os.path.realpath('/TiledViz/TVConnections/'))
+# from connect import sock
+
 import json
     
 if (os.path.exists("config.tar")):
@@ -134,7 +139,9 @@ print("\n"+COMMANDStop)
 sys.stdout.flush()
 
 # Launch dockers
+stateVM=True
 def Run_dockers():
+    global stateVM
     COMMAND="bash -c \""+os.path.join(TILEDOCKERS_path,"launch_dockers")+" "+REF_CAS+" "+GPU_FILE+" "+HTTP_FRONTEND+":"+HTTP_IP+\
              " "+network+" "+nethost+" "+domain+" "+init_IP+" TileSetPort "+UserFront+"@"+Frontend+" "+OPTIONS+\
              " > "+os.path.join(JOBPath,"output_launch")+" 2>&1 \"" 
@@ -142,7 +149,9 @@ def Run_dockers():
     print("\nCommand dockers : "+COMMAND)
 
     client.send_server(LaunchTS+' '+COMMAND)
-    print("Out of launch dockers : "+ str(client.get_OK()))
+    state=client.get_OK()
+    stateVM=stateVM and (state == 0)
+    print("Out of launch docker : "+ str(state))
     sys.stdout.flush()
 
 Run_dockers()
@@ -157,6 +166,7 @@ taglist = open("tagliste", "r")
 
 # Build nodes.json file from new dockers list
 def build_nodes_file():
+    global stateVM
     print("Build nodes.json file from new dockers list.")
     # COMMAND=LaunchTS+' chmod u+x build_nodes_file '
     # client.send_server(COMMAND)
@@ -166,10 +176,13 @@ def build_nodes_file():
     print("\nCommand dockers : "+COMMAND)
 
     client.send_server(COMMAND)
-    print("Out of build_nodes_file : "+ str(client.get_OK()))
+    state=client.get_OK()
+    stateVM=stateVM and (state == 0)
+    print("Out of build_nodes_file : "+ str(state))
     time.sleep(2)
 
-build_nodes_file()
+if (stateVM):
+    build_nodes_file()
 sys.stdout.flush()
 #get_file_client(client,TileSet,JOBPath,"nodes.json",".")
 
@@ -177,37 +190,56 @@ time.sleep(2)
 # Launch docker tools
 def launch_resize(RESOL="1440x900"):
     client.send_server(ExecuteTS+' xrandr --fb '+RESOL)
-    print("Out of xrandr : "+ str(client.get_OK()))
+    state=client.get_OK()
+    print("Out of xrandr : "+ str(state))
 
-launch_resize()
+if (stateVM):
+    launch_resize()
 
 def launch_tunnel():
+    global stateVM
     # Call tunnel for VNC
     client.send_server(ExecuteTS+' /opt/tunnel_ssh '+HTTP_FRONTEND+' '+HTTP_LOGIN)
-    print("Out of tunnel_ssh : "+ str(client.get_OK()))
+    state=client.get_OK()
+    stateVM=stateVM and (state == 0)
+    print("Out of tunnel_ssh : "+ str(state))
+    if (not stateVM):
+        return
+
     # Get back PORT
     for i in range(NUM_DOCKERS):
         i0="%0.3d" % (i+1)
         client.send_server(ExecuteTS+' Tiles=('+containerId(i+1)+') '+
                            'bash -c "cat .vnc/port |xargs -I @ sed -e \"s#port='+SOCKETdomain+i0+'#port=@#\" -i CASE/nodes.json"')
-        print("Out of change port %s : " % (i0) + str(client.get_OK()))
+        state=client.get_OK()
+        stateVM=stateVM and (state == 0)
+        print("Out of change port %s : " % (i0) + str(state))
+    if (not stateVM):
+        return
 
     sys.stdout.flush()
+    if (not stateVM):
+        return
     launch_nodes_json()
 
-launch_tunnel()
+if (stateVM):
+    launch_tunnel()
 sys.stdout.flush()
 
 def launch_vnc():
+    global stateVM
     client.send_server(ExecuteTS+' /opt/vnccommand')
-    print("Out of vnccommand : "+ str(client.get_OK()))
+    state=client.get_OK()
+    stateVM=stateVM and (state == 0)
+    print("Out of vnccommand : "+ str(state))
 
-launch_vnc()
+if (stateVM):
+    launch_vnc()
 
 def launch_one_client(script='vmd_client',tileNum=-1,tileId='001'):
     line=taglist.readline().split(' ')
     file_name=(line[1].split('='))[1].replace('"','')
-    COMMAND=' '+CASE_DOCKER_PATH+script+' '+DATA_PATH_DOCKER+' '+file_name
+    COMMAND=' '+os.path.join(CASE_DOCKER_PATH,script)+' '+DATA_PATH_DOCKER+' '+file_name
     if ( tileNum > -1 ):
         TilesStr=' Tiles=('+containerId(tileNum+1)+') '            
     else:
@@ -223,18 +255,15 @@ def Run_clients():
         launch_one_client(tileNum=i)
     Last_Elt=NUM_DOCKERS-1
 
-Run_clients()
+if (stateVM):
+    Run_clients()
 sys.stdout.flush()
-
-def get_new_nodes():
-    return
-tiles_actions["action0"]=["get_new_nodes","system_update_alt"]
 
 def next_element(script='vmd_client',tileNum=-1,tileId='001'):
     line2=taglist.readline()
     line=line2.split(' ')
     file_name=(line[1].split('='))[1].replace('"','')
-    COMMAND=' '+CASE_DOCKER_PATH+script+' '+DATA_PATH_DOCKER+' '+file_name
+    COMMAND=' '+os.path.join(CASE_DOCKER_PATH,script)+' '+DATA_PATH_DOCKER+' '+file_name
     COMMANDKill=' '+CASE_DOCKER_PATH+"kill_vmd"
     if ( tileNum > -1 ):
         tileId=containerId(tileNum+1)
@@ -282,7 +311,8 @@ def init_wmctrl():
     client.send_server(ExecuteTS+' wmctrl -l -G')
     print("Out of wmctrl : "+ str(client.get_OK()))
 
-init_wmctrl()
+if (stateVM):
+    init_wmctrl()
 
 def clear_vnc(tileNum=-1,tileId='001'):
     if ( tileNum > -1 ):
@@ -298,7 +328,8 @@ def clear_vnc_all():
         clear_vnc(i)
         #clear_vnc(tileId=containerId(i))
 
-clear_vnc_all()
+if (stateVM):
+    clear_vnc_all()
 
 def click_point(tileNum=-1,tileId='001',X=0,Y=0):
     if ( tileNum > -1 ):
