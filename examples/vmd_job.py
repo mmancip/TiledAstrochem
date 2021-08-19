@@ -188,8 +188,8 @@ sys.stdout.flush()
 
 time.sleep(2)
 # Launch docker tools
-def launch_resize(RESOL="1440x900"):
-    client.send_server(ExecuteTS+' xrandr --fb '+RESOL)
+def launch_resize(RESOL="1280x800"): #"1440x900"
+    client.send_server(ExecuteTS+' bash -c "export DISPLAY=:1; xrandr --fb '+RESOL+'"')
     state=client.get_OK()
     print("Out of xrandr : "+ str(state))
 
@@ -225,6 +225,10 @@ def launch_tunnel():
 if (stateVM):
     launch_tunnel()
 sys.stdout.flush()
+
+nodesf=open("nodes.json",'r')
+nodes=json.load(nodesf)
+nodesf.close()    
 
 def launch_vnc():
     global stateVM
@@ -280,10 +284,6 @@ def next_element(script='vmd_client',tileNum=-1,tileId='001'):
     client.send_server(CommandTS)
     client.get_OK()
 
-    nodesf=open("nodes.json",'r')
-    nodes=json.load(nodesf)
-    nodesf.close()
-    
     nodes["nodes"][tileNum]["title"]=tileId+" "+file_name
     if ("variable" in nodes["nodes"][tileNum]):
         nodes["nodes"][tileNum]["variable"]="ID-"+tileId+"_"+file_name
