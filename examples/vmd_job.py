@@ -209,11 +209,23 @@ def launch_tunnel():
     # Get back PORT
     for i in range(NUM_DOCKERS):
         i0="%0.3d" % (i+1)
-        client.send_server(ExecuteTS+' Tiles=('+containerId(i+1)+') '+
-                           'bash -c "cat .vnc/port |xargs -I @ sed -e \"s#port='+SOCKETdomain+i0+'#port=@#\" -i CASE/nodes.json"')
+        TILEi=ExecuteTS+' Tiles=('+containerId(i+1)+') '
+        SSH_JobPath=HTTP_LOGIN+"@"+HTTP_FRONTEND+":"+JOBPath
+        COMMANDi="bash -c \"while ( [ ! -f .vnc/port ] ); do sleep 2; ls -la .vnc; done;"+\
+                  " export PORT=\$(cat .vnc/port); "+\
+                  " scp "+SSH_JobPath+"/nodes.json CASE/ ;"+\
+                  " sed -e 's#port="+SOCKETdomain+i0+"#port='\$PORT'#' -i CASE/nodes.json\"; "+\
+                  " scp CASE/nodes.json "+SSH_JobPath+"/ ;"
+        print("%s | %s" % (TILEi, COMMANDi)) 
+        sys.stdout.flush()
+        client.send_server(TILEi+COMMANDi)
         state=client.get_OK()
         stateVM=stateVM and (state == 0)
-        print("Out of change port %s : " % (i0) + str(state))
+        print("Out of change port %s : %s" % (i0,state))
+        sys.stdout.flush()
+        if (state != 0):
+            break
+
     if (not stateVM):
         return
 
