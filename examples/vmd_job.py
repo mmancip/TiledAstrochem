@@ -33,9 +33,9 @@ DOCKERSPACE_DIR=config['SITE']['DOCKERSPACE_DIR']
 #NOVNC_URL=config['SITE']['NOVNC_URL']
 GPU_FILE=config['SITE']['GPU_FILE']
 
-HTTP_FRONTEND=config['SITE']['HTTP_FRONTEND']
-HTTP_LOGIN=config['SITE']['HTTP_LOGIN']
-HTTP_IP=config['SITE']['HTTP_IP']
+SSH_FRONTEND=config['SITE']['SSH_FRONTEND']
+SSH_LOGIN=config['SITE']['SSH_LOGIN']
+SSH_IP=config['SITE']['SSH_IP']
 init_IP=config['SITE']['init_IP']
 
 config.read(CASE_config)
@@ -80,6 +80,11 @@ client.send_server(CreateTS)
 
 # get TiledAstrochem package from Github
 COMMAND_GIT="git clone https://github.com/mmancip/TiledAstrochem.git"
+print("command_git : "+COMMAND_GIT)
+os.system(COMMAND_GIT)
+
+# get TiledAstrochem package from Github
+COMMAND_GIT="git checkout SSL"
 print("command_git : "+COMMAND_GIT)
 os.system(COMMAND_GIT)
 
@@ -142,7 +147,7 @@ sys.stdout.flush()
 stateVM=True
 def Run_dockers():
     global stateVM
-    COMMAND="bash -c \""+os.path.join(TILEDOCKERS_path,"launch_dockers")+" "+REF_CAS+" "+GPU_FILE+" "+HTTP_FRONTEND+":"+HTTP_IP+\
+    COMMAND="bash -c \""+os.path.join(TILEDOCKERS_path,"launch_dockers")+" "+REF_CAS+" "+GPU_FILE+" "+SSH_FRONTEND+":"+SSH_IP+\
              " "+network+" "+nethost+" "+domain+" "+init_IP+" TileSetPort "+UserFront+"@"+Frontend+" "+OPTIONS+\
              " > "+os.path.join(JOBPath,"output_launch")+" 2>&1 \"" 
 
@@ -199,7 +204,7 @@ if (stateVM):
 def launch_tunnel():
     global stateVM
     # Call tunnel for VNC
-    client.send_server(ExecuteTS+' /opt/tunnel_ssh '+HTTP_FRONTEND+' '+HTTP_LOGIN)
+    client.send_server(ExecuteTS+' /opt/tunnel_ssh '+SSH_FRONTEND+' '+SSH_LOGIN)
     state=client.get_OK()
     stateVM=stateVM and (state == 0)
     print("Out of tunnel_ssh : "+ str(state))
@@ -210,7 +215,7 @@ def launch_tunnel():
     for i in range(NUM_DOCKERS):
         i0="%0.3d" % (i+1)
         TILEi=ExecuteTS+' Tiles=('+containerId(i+1)+') '
-        SSH_JobPath=HTTP_LOGIN+"@"+HTTP_FRONTEND+":"+JOBPath
+        SSH_JobPath=SSH_LOGIN+"@"+SSH_FRONTEND+":"+JOBPath
         COMMANDi="bash -c \"while ( [ ! -f .vnc/port ] ); do sleep 2; ls -la .vnc; done;"+\
                   " export PORT=\$(cat .vnc/port); "+\
                   " scp "+SSH_JobPath+"/nodes.json CASE/ ;"+\
