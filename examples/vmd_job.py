@@ -30,6 +30,7 @@ config.read(SITE_config)
 
 TILEDOCKERS_path=config['SITE']['TILEDOCKER_DIR']
 DOCKERSPACE_DIR=config['SITE']['DOCKERSPACE_DIR']
+DOMAIN=config['SITE']['DOMAIN']
 #NOVNC_URL=config['SITE']['NOVNC_URL']
 GPU_FILE=config['SITE']['GPU_FILE']
 
@@ -84,9 +85,9 @@ print("command_git : "+COMMAND_GIT)
 os.system(COMMAND_GIT)
 
 # get TiledAstrochem package from Github
-COMMAND_GIT="git checkout SSL"
-print("command_git : "+COMMAND_GIT)
-os.system(COMMAND_GIT)
+COMMAND_TAG="bash -c 'cd TiledAstrochem; git pull origin SSL; git checkout SSL'"
+print("command_git : "+COMMAND_TAG)
+os.system(COMMAND_TAG)
 
 # Global commands
 # Execute on each/a set of tiles
@@ -123,6 +124,10 @@ except:
 COMMAND_TiledAstrochem=LaunchTS+COMMAND_GIT
 client.send_server(COMMAND_TiledAstrochem)
 print("Out of git clone TiledAstrochem : "+ str(client.get_OK()))
+
+COMMAND_TiledAstrochem=LaunchTS+COMMAND_TAG
+client.send_server(COMMAND_TiledAstrochem)
+print("Out of git tag SSL : "+ str(client.get_OK()))
 
 COMMAND_copy=LaunchTS+"cp -rp TiledAstrochem/vmd_client "+\
               "TiledAstrochem/kill_vmd "+\
@@ -211,16 +216,40 @@ def launch_tunnel():
     if (not stateVM):
         return
 
+    commandTestFreePort="ssh "+SSH_LOGIN+"@"+SSH_FRONTEND+''' \'bash -c "echo \\$(python -c \\\"import socket; s=socket.socket(); s.bind((\\\\\\"\\\\\\", 0)); print(s.getsockname()[1]); s.close();\\\" )"\' > .vnc/port_wss'''
+    client.send_server(ExecuteTS+commandTestFreePort)
+    state=client.get_OK()
+    stateVM=stateVM and (state == 0)
+    print("Out of get WSS PORT : "+ str(state))
+    if (not stateVM):
+        return
+
     # Get back PORT
     for i in range(NUM_DOCKERS):
         i0="%0.3d" % (i+1)
         TILEi=ExecuteTS+' Tiles=('+containerId(i+1)+') '
         SSH_JobPath=SSH_LOGIN+"@"+SSH_FRONTEND+":"+JOBPath
-        COMMANDi="bash -c \"while ( [ ! -f .vnc/port ] ); do sleep 2; ls -la .vnc; done;"+\
+        COMMANDi="bash -c \"while ( [ ! -f .vnc/port_wss ] ); do sleep 2; ls -la .vnc; done;"+\
                   " export PORT=\$(cat .vnc/port); "+\
+                  " export PORTWSS=\$(cat .vnc/port_wss); "+\
                   " scp "+SSH_JobPath+"/nodes.json CASE/ ;"+\
-                  " sed -e 's#port="+SOCKETdomain+i0+"#port='\$PORT'#' -i CASE/nodes.json\"; "+\
-                  " scp CASE/nodes.json "+SSH_JobPath+"/ ;"
+                  " sed -e 's#port="+SOCKETdomain+i0+"#port='\$PORTWSS'#' -i CASE/nodes.json; "+\
+                  " scp CASE/nodes.json "+SSH_JobPath+"/ ;"+\
+                  " ssh "+SSH_LOGIN+"@"+SSH_FRONTEND+''' \' bash -c \\\" cd '''+TILEDOCKERS_path+"; "+\
+                  "      cd ../websockify/; LOG=/tmp/websockify_"+i0+"_\\\$(date +%F_%H-%M-%S).log; pwd > \\\\\$LOG; "+\
+                  "      nohup ./websockify.py --web "+TILEDOCKERS_path+"/../../TVWeb/noVNC "+\
+                  "                    --cert /etc/letsencrypt/archive/"+DOMAIN+"/fullchain1.pem "+\
+                  "                    --key /etc/letsencrypt/archive/"+DOMAIN+"/privkey1.pem "+\
+                  '''                  \'\$PORTWSS\' 0.0.0.0:\'\$PORT\' 2>&1 >> \\\\\$LOG & '''+\
+                  '''    pgrep -f \\\\\".*websockify.py.*\'\$PORTWSS\'\\\\\" >> /tmp/list_websockify_'''+i0+"_\\\$(date +%F_%H-%M-%S).log"+\
+                  ''' \\\"\' ''' +\
+                  "\""
+        # TODO : DOC install noVNC on web server
+        # pushd TILEDOCKERS_path+"/../../TVWeb
+        # git clone https://github.com/novnc/noVNC.git noVNC
+        # cd noVNC
+        # git checkout 33e1462
+        # TODO2 : remove correct websockify after stop vmd container
         print("%s | %s" % (TILEi, COMMANDi)) 
         sys.stdout.flush()
         client.send_server(TILEi+COMMANDi)
@@ -419,6 +448,16 @@ def movewindows(windowname="VMD 1.9.2 OpenGL Display",wmctrl_option='toggle,full
 
 
 def kill_all_containers():
+    # Get back PORTWSS and kill websockify servers
+    for i in range(NUM_DOCKERS):
+        i0="%0.3d" % (i+1)
+        TILEi=ExecuteTS+' Tiles=('+containerId(i+1)+') '
+        COMMANDi="bash -c \" "+\
+                  " export PORTWSS=\$(cat .vnc/port_wss); "+\
+                  " ssh "+SSH_LOGIN+"@"+SSH_FRONTEND+''' \' bash -c \\\" '''+\
+                  '''      pgrep -f \\\\\".*websockify.*\'\$PORTWSS\'\\\\\" |xargs kill '''+\
+                  ''' \\\"\' ''' +\
+                  "\""
     client.send_server(ExecuteTS+' killall Xvnc')
     print("Out of killall command : "+ str(client.get_OK()))
     client.send_server(LaunchTS+" "+COMMANDStop)
