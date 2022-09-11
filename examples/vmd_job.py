@@ -236,10 +236,10 @@ def launch_tunnel():
                   " sed -e 's#port="+SOCKETdomain+i0+"#port='\$PORTWSS'#' -i CASE/nodes.json; "+\
                   " scp CASE/nodes.json "+SSH_JobPath+"/ ;"+\
                   " ssh "+SSH_LOGIN+"@"+SSH_FRONTEND+''' \' bash -c \\\" cd '''+TILEDOCKERS_path+"/..; "+\
-                  "    LOG=/tmp/websockify_"+i0+"_\\\$(date +%F_%H-%M-%S).log; pwd > \\\\\$LOG;"+\
                   "    ./wss_websockify "+DOMAIN+" "+''' \'\$PORTWSS\' \'\$PORT\' '''+TILEDOCKERS_path+"/../../TVWeb &"+\
                   ''' \\\"\' & ''' +\
                   "\""
+        #"    LOG=/tmp/websockify_"+i0+"_\\\$(date +%F_%H-%M-%S).log; pwd > \\\\\$LOG;"+\
         #'''  pgrep -f \\\\\".*websockify.*\'\$PORTWSS\'\\\\\" >> \\\\\$LOG'''+\
         # TODO : DOC install noVNC on web server
         # pushd TILEDOCKERS_path+"/../../TVWeb
@@ -445,6 +445,7 @@ def movewindows(windowname="VMD 1.9.2 OpenGL Display",wmctrl_option='toggle,full
 
 
 def kill_all_containers():
+    global stateVM
     # Get back PORTWSS and kill websockify servers
     for i in range(NUM_DOCKERS):
         i0="%0.3d" % (i+1)
@@ -455,6 +456,15 @@ def kill_all_containers():
                   '''      pgrep -f \\\\\".*websockify.*\'\$PORTWSS\'\\\\\" |xargs kill '''+\
                   ''' \\\"\' ''' +\
                   "\""
+        print("%s | %s" % (TILEi, COMMANDi)) 
+        sys.stdout.flush()
+        client.send_server(TILEi+COMMANDi)
+        state=client.get_OK()
+        stateVM=stateVM and (state == 0)
+        print("Out of kill websockify %s : %s" % (i0,state))
+        sys.stdout.flush()
+        if (state != 0):
+            break
     client.send_server(ExecuteTS+' killall Xvnc')
     print("Out of killall command : "+ str(client.get_OK()))
     client.send_server(LaunchTS+" "+COMMANDStop)
