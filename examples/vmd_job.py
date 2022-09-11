@@ -235,21 +235,18 @@ def launch_tunnel():
                   " scp "+SSH_JobPath+"/nodes.json CASE/ ;"+\
                   " sed -e 's#port="+SOCKETdomain+i0+"#port='\$PORTWSS'#' -i CASE/nodes.json; "+\
                   " scp CASE/nodes.json "+SSH_JobPath+"/ ;"+\
-                  " ssh "+SSH_LOGIN+"@"+SSH_FRONTEND+''' \' bash -c \\\" cd '''+TILEDOCKERS_path+"; "+\
-                  "      cd ../websockify/; LOG=/tmp/websockify_"+i0+"_\\\$(date +%F_%H-%M-%S).log; pwd > \\\\\$LOG; "+\
-                  "      nohup ./websockify.py --web "+TILEDOCKERS_path+"/../../TVWeb/noVNC "+\
-                  "                    --cert /etc/letsencrypt/archive/"+DOMAIN+"/fullchain1.pem "+\
-                  "                    --key /etc/letsencrypt/archive/"+DOMAIN+"/privkey1.pem "+\
-                  '''                  \'\$PORTWSS\' 0.0.0.0:\'\$PORT\' 2>&1 >> \\\\\$LOG & '''+\
-                  '''    pgrep -f \\\\\".*websockify.py.*\'\$PORTWSS\'\\\\\" >> /tmp/list_websockify_'''+i0+"_\\\$(date +%F_%H-%M-%S).log"+\
-                  ''' \\\"\' ''' +\
+                  " ssh "+SSH_LOGIN+"@"+SSH_FRONTEND+''' \' bash -c \\\" cd '''+TILEDOCKERS_path+"/..; "+\
+                  "    LOG=/tmp/websockify_"+i0+"_\\\$(date +%F_%H-%M-%S).log; pwd > \\\\\$LOG;"+\
+                  "    ./wss_websockify "+DOMAIN+" "+''' \'\$PORTWSS\' \'\$PORT\' '''+TILEDOCKERS_path+"/../../TVWeb &"+\
+                  ''' \\\"\' & ''' +\
                   "\""
+        #'''  pgrep -f \\\\\".*websockify.*\'\$PORTWSS\'\\\\\" >> \\\\\$LOG'''+\
         # TODO : DOC install noVNC on web server
         # pushd TILEDOCKERS_path+"/../../TVWeb
         # git clone https://github.com/novnc/noVNC.git noVNC
         # cd noVNC
         # git checkout 33e1462
-        # TODO2 : remove correct websockify after stop vmd container
+
         print("%s | %s" % (TILEi, COMMANDi)) 
         sys.stdout.flush()
         client.send_server(TILEi+COMMANDi)
