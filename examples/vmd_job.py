@@ -85,7 +85,7 @@ print("command_git : "+COMMAND_GIT)
 os.system(COMMAND_GIT)
 
 # get TiledAstrochem package from Github
-COMMAND_TAG="bash -c 'cd TiledAstrochem; git pull origin SSL; git checkout SSL'"
+COMMAND_TAG="bash -c 'cd TiledAstrochem; git checkout SSL'"
 print("command_git : "+COMMAND_TAG)
 os.system(COMMAND_TAG)
 
