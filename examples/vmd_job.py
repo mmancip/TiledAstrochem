@@ -38,6 +38,8 @@ SSH_FRONTEND=config['SITE']['SSH_FRONTEND']
 SSH_LOGIN=config['SITE']['SSH_LOGIN']
 SSH_IP=config['SITE']['SSH_IP']
 init_IP=config['SITE']['init_IP']
+SSL_PUBLIC=config['SITE']['SSL_PUBLIC']
+SSL_PRIVATE=config['SITE']['SSL_PRIVATE']
 
 config.read(CASE_config)
 
@@ -110,6 +112,7 @@ try:
     SITE_config=os.path.join(JOBPath,os.path.basename(SITE_config))
     send_file_server(client,TileSet,".", "tagliste", JOBPath)
     send_file_server(client,TileSet,".", "list_hostsgpu", JOBPath)
+    send_file_server(client,TileSet,".", "/TiledViz/TVConnections/build_wss.py", JOBPath)
 
 except:
     print("Error sending files !")
@@ -139,8 +142,10 @@ COMMAND_copy=LaunchTS+"cp -rp TiledAstrochem/vmd_client "+\
 client.send_server(COMMAND_copy)
 print("Out of copy scripts from TiledCourse : "+ str(client.get_OK()))
 
+
 # Launch containers HERE
 REF_CAS=str(NUM_DOCKERS)+" "+DATE+" "+DOCKERSPACE_DIR+" "+DOCKER_NAME
+TiledSet=list(range(NUM_DOCKERS))
 
 print("\nREF_CAS : "+REF_CAS)
 
@@ -148,140 +153,75 @@ COMMANDStop=os.path.join(TILEDOCKERS_path,"stop_dockers")+" "+REF_CAS+" "+os.pat
 print("\n"+COMMANDStop)
 sys.stdout.flush()
 
-# Launch dockers
-stateVM=True
-def Run_dockers():
-    global stateVM
-    COMMAND="bash -c \""+os.path.join(TILEDOCKERS_path,"launch_dockers")+" "+REF_CAS+" "+GPU_FILE+" "+SSH_FRONTEND+":"+SSH_IP+\
-             " "+network+" "+nethost+" "+domain+" "+init_IP+" TileSetPort "+UserFront+"@"+Frontend+" "+OPTIONS+\
-             " > "+os.path.join(JOBPath,"output_launch")+" 2>&1 \"" 
-
-    print("\nCommand dockers : "+COMMAND)
-
-    client.send_server(LaunchTS+' '+COMMAND)
-    state=client.get_OK()
-    stateVM=stateVM and (state == 0)
-    print("Out of launch docker : "+ str(state))
+try:
+    stateVM=Run_dockers()
     sys.stdout.flush()
+except:
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
 
-Run_dockers()
-sys.stdout.flush()
 
-taglist = open("tagliste", "r")
+try:
+    taglist = open("tagliste", "r")
+except:
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
 # TODO : give a liste of lines !
 # tab=taglist.readlines()
 # line=tab[123]
 # file_name=(line[1].split('='))[1].replace('"','')
 
 
-# Build nodes.json file from new dockers list
-def build_nodes_file():
-    global stateVM
-    print("Build nodes.json file from new dockers list.")
-    # COMMAND=LaunchTS+' chmod u+x build_nodes_file '
-    # client.send_server(COMMAND)
-    # print("Out of chmod build_nodes_file : "+ str(client.get_OK()))
+try:
+    if (stateVM):
+        build_nodes_file()
+    sys.stdout.flush()
+except:
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
 
-    COMMAND=LaunchTS+' ./build_nodes_file '+os.path.join(JOBPath,CASE_config)+' '+os.path.join(JOBPath,SITE_config)+' '+TileSet
-    print("\nCommand dockers : "+COMMAND)
-
-    client.send_server(COMMAND)
-    state=client.get_OK()
-    stateVM=stateVM and (state == 0)
-    print("Out of build_nodes_file : "+ str(state))
-    time.sleep(2)
-
-if (stateVM):
-    build_nodes_file()
-sys.stdout.flush()
-#get_file_client(client,TileSet,JOBPath,"nodes.json",".")
 
 time.sleep(2)
 # Launch docker tools
-def launch_resize(RESOL="1280x800"): #"1440x900"
-    client.send_server(ExecuteTS+' bash -c "export DISPLAY=:1; xrandr --fb '+RESOL+'"')
-    state=client.get_OK()
-    print("Out of xrandr : "+ str(state))
-
 if (stateVM):
-    launch_resize()
+    all_resize("1920x1080")
 
-def launch_tunnel():
-    global stateVM
-    # Call tunnel for VNC
-    client.send_server(ExecuteTS+' /opt/tunnel_ssh '+SSH_FRONTEND+' '+SSH_LOGIN)
-    state=client.get_OK()
-    stateVM=stateVM and (state == 0)
-    print("Out of tunnel_ssh : "+ str(state))
-    if (not stateVM):
-        return
 
-    commandTestFreePort="ssh "+SSH_LOGIN+"@"+SSH_FRONTEND+''' \'bash -c "echo \\$(python -c \\\"import socket; s=socket.socket(); s.bind((\\\\\\"\\\\\\", 0)); print(s.getsockname()[1]); s.close();\\\" )"\' > .vnc/port_wss'''
-    client.send_server(ExecuteTS+commandTestFreePort)
-    state=client.get_OK()
-    stateVM=stateVM and (state == 0)
-    print("Out of get WSS PORT : "+ str(state))
-    if (not stateVM):
-        return
-
-    # Get back PORT
-    for i in range(NUM_DOCKERS):
-        i0="%0.3d" % (i+1)
-        TILEi=ExecuteTS+' Tiles=('+containerId(i+1)+') '
-        SSH_JobPath=SSH_LOGIN+"@"+SSH_FRONTEND+":"+JOBPath
-        COMMANDi="bash -c \"while ( [ ! -f .vnc/port_wss ] ); do sleep 2; ls -la .vnc; done;"+\
-                  " export PORT=\$(cat .vnc/port); "+\
-                  " export PORTWSS=\$(cat .vnc/port_wss); "+\
-                  " scp "+SSH_JobPath+"/nodes.json CASE/ ;"+\
-                  " sed -e 's#port="+SOCKETdomain+i0+"#port='\$PORTWSS'#' -i CASE/nodes.json; "+\
-                  " scp CASE/nodes.json "+SSH_JobPath+"/ ;"+\
-                  " ssh "+SSH_LOGIN+"@"+SSH_FRONTEND+''' \' bash -c \\\" cd '''+TILEDOCKERS_path+"/..; "+\
-                  "    ./wss_websockify "+DOMAIN+" "+''' \'\$PORTWSS\' \'\$PORT\' '''+TILEDOCKERS_path+"/../../TVWeb &"+\
-                  ''' \\\"\' & ''' +\
-                  "\""
-        #"    LOG=/tmp/websockify_"+i0+"_\\\$(date +%F_%H-%M-%S).log; pwd > \\\\\$LOG;"+\
-        #'''  pgrep -f \\\\\".*websockify.*\'\$PORTWSS\'\\\\\" >> \\\\\$LOG'''+\
-        # TODO : DOC install noVNC on web server
-        # pushd TILEDOCKERS_path+"/../../TVWeb
-        # git clone https://github.com/novnc/noVNC.git noVNC
-        # cd noVNC
-        # git checkout 33e1462
-
-        print("%s | %s" % (TILEi, COMMANDi)) 
-        sys.stdout.flush()
-        client.send_server(TILEi+COMMANDi)
-        state=client.get_OK()
-        stateVM=stateVM and (state == 0)
-        print("Out of change port %s : %s" % (i0,state))
-        sys.stdout.flush()
-        if (state != 0):
-            break
-
-    if (not stateVM):
-        return
-
+try:
+    if (stateVM):
+        stateVM=launch_tunnel()
     sys.stdout.flush()
-    if (not stateVM):
-        return
-    launch_nodes_json()
+except:
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
+print("after launch tunnel servers %r" % (stateVM))
 
-if (stateVM):
-    launch_tunnel()
-sys.stdout.flush()
+try:
+    nodesf=open("nodes.json",'r')
+    nodes=json.load(nodesf)
+    nodesf.close()
+except:
+    print("nodes.json doesn't exists !")
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
 
-nodesf=open("nodes.json",'r')
-nodes=json.load(nodesf)
-nodesf.close()    
+print("after read nodes.json %r" % (stateVM))
 
-def launch_vnc():
-    global stateVM
-    client.send_server(ExecuteTS+' /opt/vnccommand')
-    state=client.get_OK()
-    stateVM=stateVM and (state == 0)
-    print("Out of vnccommand : "+ str(state))
+try:
+    if (stateVM):
+        stateVM=launch_vnc()
+except:
+    print("Problem when launch vnc !")
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
 
-if (stateVM):
-    launch_vnc()
+print("after launch vnc servers %r" % (stateVM))
 
 def launch_one_client(script='vmd_client',tileNum=-1,tileId='001'):
     line=taglist.readline().split(' ')
@@ -302,9 +242,13 @@ def Run_clients():
         launch_one_client(tileNum=i)
     Last_Elt=NUM_DOCKERS-1
 
-if (stateVM):
-    Run_clients()
-sys.stdout.flush()
+try:
+    if (stateVM):
+        Run_clients()
+    sys.stdout.flush()
+except:
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
 
 def next_element(script='vmd_client',tileNum=-1,tileId='001'):
     line2=taglist.readline()
@@ -327,9 +271,9 @@ def next_element(script='vmd_client',tileNum=-1,tileId='001'):
     client.send_server(CommandTS)
     client.get_OK()
 
-    nodes["nodes"][tileNum]["title"]=tileId+" "+file_name
+    nodes["nodes"][tileNum]["title"]=tileId+" "+os.path.basename(file_name)
     if ("variable" in nodes["nodes"][tileNum]):
-        nodes["nodes"][tileNum]["variable"]="ID-"+tileId+"_"+file_name
+        nodes["nodes"][tileNum]["variable"]="ID-"+tileId+"_"+os.path.basename(file_name)
     nodes["nodes"][tileNum]["comment"]=line2
     if ("usersNotes" in nodes["nodes"][tileNum]):
         nodes["nodes"][tileNum]["usersNotes"]=re.sub(r'file .*',"file "+file_name,
@@ -365,24 +309,13 @@ def clear_vnc(tileNum=-1,tileId='001'):
     client.send_server(ExecuteTS+TilesStr+' x11vnc -R clear-all')
     print("Out of clear-vnc : "+ str(client.get_OK()))
 
-def clear_vnc_all():
-    os.system('x11vnc -R clear-all')
-    for i in range(NUM_DOCKERS):
-        clear_vnc(i)
-        #clear_vnc(tileId=containerId(i))
+try:
+    if (stateVM):
+        clear_vnc_all()
+except:
+    traceback.print_exc(file=sys.stdout)
 
-if (stateVM):
-    clear_vnc_all()
 
-def click_point(tileNum=-1,tileId='001',X=0,Y=0):
-    if ( tileNum > -1 ):
-        TilesStr=' Tiles=('+containerId(tileNum+1)+') '
-    else:
-        TilesStr=' Tiles=('+tileId+') '
-    COMMAND=" xdotool mousemove "+str(X)+" "+str(Y)+" click 1 mousemove restore"
-    # -> xdotool getmouselocation
-    client.send_server(ExecuteTS+TilesStr+COMMAND)
-    print("Out of click_point : "+ str(client.get_OK()))
 
 def start_traj(tileNum=-1,tileId='001'):
     Xstart=466
@@ -431,59 +364,16 @@ def fullscreenApp(windowname="VMD 1.9.2 OpenGL Display",tileNum=-1):
 def showGUI(windowname="VMD Main",tileNum=-1):
     COMMAND='/opt/movewindows '+windowname+' -b '
     movewindows(windowname=windowname,wmctrl_option='toggle,fullscreen',tileNum=tileNum)
-    
-def movewindows(windowname="VMD 1.9.2 OpenGL Display",wmctrl_option='toggle,fullscreen',tileNum=-1,tileId='001'):
-    COMMAND='/opt/movewindows '+windowname+' -b '+wmctrl_option
-    #remove,maximized_vert,maximized_horz
-    #toggle,above
-    if ( tileNum > -1 ):
-        TilesStr=' Tiles=('+containerId(tileNum+1)+') '
-    else:
-        TilesStr=' Tiles=('+tileId+') '
-    client.send_server(ExecuteTS+TilesStr+COMMAND)
-    client.get_OK()
 
 
-def kill_all_containers():
-    global stateVM
-    # Get back PORTWSS and kill websockify servers
-    for i in range(NUM_DOCKERS):
-        i0="%0.3d" % (i+1)
-        TILEi=ExecuteTS+' Tiles=('+containerId(i+1)+') '
-        COMMANDi="bash -c \" "+\
-                  " export PORTWSS=\$(cat .vnc/port_wss); "+\
-                  " ssh "+SSH_LOGIN+"@"+SSH_FRONTEND+''' \' bash -c \\\" '''+\
-                  '''      pgrep -f \\\\\".*websockify.*\'\$PORTWSS\'\\\\\" |xargs kill '''+\
-                  ''' \\\"\' ''' +\
-                  "\""
-        print("%s | %s" % (TILEi, COMMANDi)) 
-        sys.stdout.flush()
-        client.send_server(TILEi+COMMANDi)
-        state=client.get_OK()
-        stateVM=stateVM and (state == 0)
-        print("Out of kill websockify %s : %s" % (i0,state))
-        sys.stdout.flush()
-        if (state != 0):
-            break
-    client.send_server(ExecuteTS+' killall Xvnc')
-    print("Out of killall command : "+ str(client.get_OK()))
-    client.send_server(LaunchTS+" "+COMMANDStop)
-    taglist.close()
-    client.close()
+launch_actions_and_interact()
 
 try:
     print("isActions: "+str(isActions))
 except:
     print("isActions not defined.")
 
-#isActions=True
-launch_actions_and_interact()
-
 kill_all_containers()
 
 sys.exit(0)
-
-# 0x0140000d  0 935  747  499  147 vmd console
-# 0x01800009  0 602  -98  669  834 VMD 1.9.2 OpenGL Display
-# 0x01600004  0 6    26   470  190 VMD Main
 

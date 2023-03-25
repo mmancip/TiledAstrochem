@@ -53,7 +53,7 @@ echo '{ "nodes": [' > nodes.json
 i=0
 while IFS='' read -r -u3 line && IFS='' read -r -u4 line2 || [[ -n "$line" ]]; do
   if [ X"${line}" == X"" ]; then  
-      echo "error too old passord file."
+      echo "error too old password file."
       rm -f nodes.json
       exit 2
   fi
