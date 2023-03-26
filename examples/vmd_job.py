@@ -66,12 +66,6 @@ PYTHON_PATH=config['CASE']['PYTHON_PATH']
 
 OPTIONS=config['CASE']['OPTIONS'].replace("$","").replace('"','')
 print("\nOPTIONS from CASE_CONFIG : "+OPTIONS)
-def replaceconf(x):
-    if (re.search('}',x)):
-        varname=x.replace("{","").replace("}","")
-        return config['CASE'][varname]
-    else:
-        return x
 OPTIONS=OPTIONS.replace("JOBPath",JOBPath)
 OPTIONS=OPTIONS.replace('{','|{').replace('}','}|').split('|')
 OPTIONS="".join(list(map( replaceconf,OPTIONS)))
@@ -85,11 +79,6 @@ client.send_server(CreateTS)
 COMMAND_GIT="git clone https://github.com/mmancip/TiledAstrochem.git"
 print("command_git : "+COMMAND_GIT)
 os.system(COMMAND_GIT)
-
-# get TiledAstrochem package from Github
-COMMAND_TAG="bash -c 'cd TiledAstrochem; git checkout SSL'"
-print("command_git : "+COMMAND_TAG)
-os.system(COMMAND_TAG)
 
 # Global commands
 # Execute on each/a set of tiles
@@ -127,10 +116,6 @@ except:
 COMMAND_TiledAstrochem=LaunchTS+COMMAND_GIT
 client.send_server(COMMAND_TiledAstrochem)
 print("Out of git clone TiledAstrochem : "+ str(client.get_OK()))
-
-COMMAND_TiledAstrochem=LaunchTS+COMMAND_TAG
-client.send_server(COMMAND_TiledAstrochem)
-print("Out of git tag SSL : "+ str(client.get_OK()))
 
 COMMAND_copy=LaunchTS+"cp -rp TiledAstrochem/vmd_client "+\
               "TiledAstrochem/kill_vmd "+\
