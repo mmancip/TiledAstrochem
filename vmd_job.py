@@ -30,7 +30,6 @@ config.read(SITE_config)
 
 TILEDOCKERS_path=config['SITE']['TILEDOCKER_DIR']
 DOCKERSPACE_DIR=config['SITE']['DOCKERSPACE_DIR']
-DOMAIN=config['SITE']['DOMAIN']
 #NOVNC_URL=config['SITE']['NOVNC_URL']
 GPU_FILE=config['SITE']['GPU_FILE']
 
@@ -44,6 +43,8 @@ SSL_PRIVATE=config['SITE']['SSL_PRIVATE']
 config.read(CASE_config)
 
 CASE=config['CASE']['CASE_NAME']
+App="OpenGL Display"
+
 NUM_DOCKERS=int(config['CASE']['NUM_DOCKERS'])
 
 CASE_DOCKER_PATH=config['CASE']['CASE_DOCKER_PATH']
