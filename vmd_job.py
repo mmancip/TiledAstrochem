@@ -359,12 +359,8 @@ def next_element(script='vmd_client',tileNum=-1,tileId='001'):
     nodesf=open("nodes.json",'w')
     nodesf.write(json.dumps(nodes))
     nodesf.close()
-    
-    
-def init_wmctrl():
-    client.send_server(ExecuteTS+' wmctrl -l -G')
-    print("Out of wmctrl : "+ str(client.get_OK()))
 
+    
 if (stateVM):
     init_wmctrl()
 
